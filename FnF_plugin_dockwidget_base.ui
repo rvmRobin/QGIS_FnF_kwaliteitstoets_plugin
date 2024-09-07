@@ -13,18 +13,48 @@
   <property name="windowTitle">
    <string>FnF kwaliteitstoets plugin</string>
   </property>
+
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
-     <widget class="QLabel" name="label">
-      <property name="text">
-       <string>Replace this QLabel
-with the desired
-plugin content.</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
+
+   <!-- Label for Point Data -->
+   <item row="0" column="0">
+    <widget class="QLabel" name="labelPointData">
+     <property name="text">
+      <string>Selecteer waarnemingen</string>
+     </property>
+    </widget>
+   </item>
+
+   <!-- ComboBox for Point Data -->
+   <item row="0" column="1">
+    <widget class="QComboBox" name="comboBoxPointData"/>
+   </item>
+
+   <!-- Label for Polygon Layer -->
+   <item row="1" column="0">
+    <widget class="QLabel" name="labelPolygonLayer">
+     <property name="text">
+      <string>Selecteer gebiedslaag</string>
+     </property>
+    </widget>
+   </item>
+
+   <!-- ComboBox for Polygon Layer -->
+   <item row="1" column="1">
+    <widget class="QComboBox" name="comboBoxPolygonLayer"/>
+   </item>
+
+   <!-- Submit Button -->
+   <item row="2" column="1" colspan="1">
+    <widget class="QPushButton" name="createha">
+     <property name="text">
+      <string>Maak hexagonengrid</string>
+     </property>
+    </widget>
+   </item>
+
+  </layout>
   </widget>
  </widget>
  <resources/>
