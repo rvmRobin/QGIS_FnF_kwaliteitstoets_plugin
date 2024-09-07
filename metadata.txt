@@ -27,7 +27,7 @@ tags=python
 
 homepage=https://github.com/rvmRobin/QGIS_FnF_kwaliteitstoets_plugin
 category=Plugins
-icon=icon.png
+icon=icon/FnF_icon.png
 # experimental flag
 experimental=False
 

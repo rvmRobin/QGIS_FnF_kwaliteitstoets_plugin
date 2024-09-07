@@ -19,8 +19,13 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.populate_comboboxes()
         self.createha.clicked.connect(self.createha_clicked)
 
+        QgsProject.instance().layersAdded.connect(self.update_comboboxes)
+        QgsProject.instance().layerRemoved.connect(self.update_comboboxes)
+
     def closeEvent(self, event):
         self.closingPlugin.emit()
+        QgsProject.instance().layersAdded.disconnect(self.update_comboboxes)
+        QgsProject.instance().layerRemoved.disconnect(self.update_comboboxes)
         event.accept()
 
     def populate_comboboxes(self):
@@ -29,6 +34,7 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         layers = QgsProject.instance().mapLayers().values()
         
         # Populate the Point Data ComboBox
+        self.comboBoxPointData.clear()
         self.comboBoxPointData.addItem("Selecteer waarnemingen")
         for layer in layers:
             if isinstance(layer, QgsVectorLayer):  # Check if it's a vector layer
@@ -36,12 +42,17 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                     self.comboBoxPointData.addItem(layer.name(), layer.id())
         
         # Populate the Polygon Layer ComboBox
+        self.comboBoxPolygonLayer.clear()
         self.comboBoxPolygonLayer.addItem("Selecteer gebiedslaag")
         for layer in layers:
             if isinstance(layer, QgsVectorLayer):  # Check if it's a vector layer
                 if layer.geometryType() == QgsWkbTypes.PolygonGeometry:  # Check if it's a polygon layer
                     self.comboBoxPolygonLayer.addItem(layer.name(), layer.id())
     
+    def update_comboboxes(self):
+        """Update combo boxes when layers are added or removed."""
+        self.populate_comboboxes()
+
     def createha_clicked(self):
         # Get the selected polygon layer from the combo box
         selected_layer_id = self.comboBoxPolygonLayer.currentData()
@@ -79,10 +90,10 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         cell_size = 100  # 100x100 meter cells
         
         # Round bounding box coordinates to nearest 100 meters
-        x_min = math.floor(bbox.xMinimum() / cell_size) * cell_size
-        y_min = math.floor(bbox.yMinimum() / cell_size) * cell_size
-        x_max = math.ceil(bbox.xMaximum() / cell_size) * cell_size
-        y_max = math.ceil(bbox.yMaximum() / cell_size) * cell_size
+        x_min = math.floor(bbox.xMinimum() / cell_size) * cell_size - 100
+        y_min = math.floor(bbox.yMinimum() / cell_size) * cell_size - 100
+        x_max = math.ceil(bbox.xMaximum() / cell_size) * cell_size + 100
+        y_max = math.ceil(bbox.yMaximum() / cell_size) * cell_size + 100
         
         # Create a new vector layer for the grid
         grid_layer = QgsVectorLayer("Polygon?crs=EPSG:28992", "Square Grid", "memory")
@@ -115,4 +126,3 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Add the layer to the QGIS project
         QgsProject.instance().addMapLayer(grid_layer)
-        QtWidgets.QMessageBox.information(self, "Success", "Square grid created and added to the QGIS project.")
