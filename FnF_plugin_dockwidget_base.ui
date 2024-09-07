@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>FnF_plug-inDockWidgetBase</class>
- <widget class="QDockWidget" name="FnF_plug-inDockWidgetBase">
+ <class>FnF_pluginDockWidgetBase</class>
+ <widget class="QDockWidget" name="FnF_pluginDockWidgetBase">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>FnF kwaliteitstoets plug-in</string>
+   <string>FnF kwaliteitstoets plugin</string>
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout">

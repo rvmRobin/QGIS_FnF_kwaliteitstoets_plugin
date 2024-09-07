@@ -1,7 +1,7 @@
 Plugin Builder Results
 
-Your plugin FnF_plug-in was created in:
-    D:/Gebruikersdata/Documents/GitHub/QGIS_FnF_kwaliteitstoets_plugin\fnf plug-in
+Your plugin FnF_plugin was created in:
+    D:/Gebruikersdata/Documents/GitHub/QGIS_FnF_kwaliteitstoets_plugin\fnf plugin
 
 Your QGIS plugin directory is located at:
     C:/Users/Eigenaar/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins
@@ -17,11 +17,11 @@ What's Next:
 
   * Test the plugin by enabling it in the QGIS plugin manager
 
-  * Customize it by editing the implementation file: ``FnF plug-in.py``
+  * Customize it by editing the implementation file: ``FnF plugin.py``
 
   * Create your own custom icon, replacing the default icon.png
 
-  * Modify your user interface by opening FnF_plug-in_dockwidget_base.ui in Qt Designer
+  * Modify your user interface by opening FnF_plugin_dockwidget_base.ui in Qt Designer
 
   * You can use the Makefile to compile your Ui and resource files when
     you make changes. This requires GNU make (gmake)

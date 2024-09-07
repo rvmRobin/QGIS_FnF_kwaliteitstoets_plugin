@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/plugins/FnF plug-in" >
-        <file>icon.png</file>
+    <qresource prefix="/plugins/FnF_plugin" >
+        <file>icon\FnF_icon.png</file>
     </qresource>
 </RCC>

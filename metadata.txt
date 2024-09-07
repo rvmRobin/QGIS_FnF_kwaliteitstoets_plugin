@@ -3,7 +3,7 @@
 # This file should be included when you package your plugin.# Mandatory items:
 
 [general]
-name=FnF kwaliteitstoets plug-in
+name=FnF kwaliteitstoets plugin
 qgisMinimumVersion=3.0
 description=This plugin creates an FnF kwaliteitstoets output
 version=0.1
