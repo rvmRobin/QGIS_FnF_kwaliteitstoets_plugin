@@ -1,40 +1,15 @@
 import os
-from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsFeatureRequest, QgsGeometry, QgsRectangle, QgsField, QgsFeature
-from qgis.gui import QgsMapTool
-from PyQt5.QtCore import pyqtSignal, QVariant, Qt
-from PyQt5.QtGui import QCursor
-from qgis.PyQt import QtWidgets, uic
+import math
+from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsField, QgsFeature, QgsGeometry, QgsRectangle, QgsPointXY
+from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, QVariant
 from qgis.utils import iface
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'FnF_plugin_dockwidget_base.ui'))
 
-class PolygonSelectionMapTool(QgsMapTool):
-    def __init__(self, canvas, callback):
-        super().__init__(canvas)
-        self.canvas = canvas
-        self.callback = callback
-        self.selected_feature = None
-        self.setCursor(QCursor(Qt.CrossCursor))
-    
-    def canvasPressEvent(self, event):
-        point = self.toMapCoordinates(event.pos())
-        layer = self.canvas.currentLayer()
-        if layer and layer.isSpatial():
-            request = QgsFeatureRequest().setFilterRect(self.canvas.extent())
-            for feature in layer.getFeatures(request):
-                if feature.geometry().contains(point):
-                    self.selected_feature = feature
-                    break
-        if self.selected_feature:
-            bbox = self.selected_feature.geometry().boundingBox()
-            self.callback(bbox)
-            self.canvas.unsetMapTool(self)
-
-    def activate(self):
-        self.selected_feature = None
-
 class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
+
     closingPlugin = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -66,7 +41,7 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             if isinstance(layer, QgsVectorLayer):  # Check if it's a vector layer
                 if layer.geometryType() == QgsWkbTypes.PolygonGeometry:  # Check if it's a polygon layer
                     self.comboBoxPolygonLayer.addItem(layer.name(), layer.id())
-
+    
     def createha_clicked(self):
         # Get the selected polygon layer from the combo box
         selected_layer_id = self.comboBoxPolygonLayer.currentData()
@@ -79,20 +54,38 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             QtWidgets.QMessageBox.warning(self, "Warning", "Selected layer is not a valid polygon layer.")
             return
 
-        # Set the layer to the map tool and activate it
-        canvas = iface.mapCanvas()
-        tool = PolygonSelectionMapTool(canvas, self.create_grid_from_bbox)
-        canvas.setMapTool(tool)
-        print("Please click on a polygon to select it.")
+        # Get the bounding box from the selected polygons
+        bbox = self.get_bounding_box_from_selection(layer)
+        
+        if not bbox:
+            # If no polygons are selected, use the bounding box of the entire layer
+            bbox = layer.extent()
+        
+        self.create_squares_from_bbox(bbox)
 
-    def create_grid_from_bbox(self, bbox):
+    def get_bounding_box_from_selection(self, layer):
+        """Get the bounding box of the selected features in the layer."""
+        selection = layer.selectedFeatures()
+        if not selection:
+            return None
+
+        extent = QgsRectangle()
+        for feature in selection:
+            extent.combineExtentWith(feature.geometry().boundingBox())
+
+        return extent
+
+    def create_squares_from_bbox(self, bbox):
         cell_size = 100  # 100x100 meter cells
         
-        x_start, y_start = bbox.xMinimum(), bbox.yMinimum()
-        x_end, y_end = bbox.xMaximum(), bbox.yMaximum()
+        # Round bounding box coordinates to nearest 100 meters
+        x_min = math.floor(bbox.xMinimum() / cell_size) * cell_size
+        y_min = math.floor(bbox.yMinimum() / cell_size) * cell_size
+        x_max = math.ceil(bbox.xMaximum() / cell_size) * cell_size
+        y_max = math.ceil(bbox.yMaximum() / cell_size) * cell_size
         
         # Create a new vector layer for the grid
-        grid_layer = QgsVectorLayer("Polygon?crs=EPSG:28992", "Grid", "memory")
+        grid_layer = QgsVectorLayer("Polygon?crs=EPSG:28992", "Square Grid", "memory")
         pr = grid_layer.dataProvider()
         
         # Add fields to the layer
@@ -103,14 +96,14 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         features = []
         
         # Generate the grid
-        x = x_start
-        while x < x_end:
-            y = y_start
-            while y < y_end:
-                # Create the geometry for each grid cell
-                geom = QgsGeometry.fromRect(QgsRectangle(x, y, x + cell_size, y + cell_size))
+        x = x_min
+        while x < x_max:
+            y = y_min
+            while y < y_max:
+                # Create the geometry for each square cell
+                square_geom = QgsGeometry.fromRect(QgsRectangle(x, y, x + cell_size, y + cell_size))
                 feature = QgsFeature()
-                feature.setGeometry(geom)
+                feature.setGeometry(square_geom)
                 feature.setAttributes([len(features)])
                 features.append(feature)
                 y += cell_size
@@ -122,4 +115,4 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Add the layer to the QGIS project
         QgsProject.instance().addMapLayer(grid_layer)
-        QtWidgets.QMessageBox.information(self, "Success", "Grid created and added to the QGIS project.")
+        QtWidgets.QMessageBox.information(self, "Success", "Square grid created and added to the QGIS project.")
