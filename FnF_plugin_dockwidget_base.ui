@@ -54,6 +54,15 @@
     </widget>
    </item>
 
+   <!-- Submit Button -->
+   <item row="2" column="0" colspan="1">
+    <widget class="QPushButton" name="set_columns_button">
+     <property name="text">
+      <string>Kolomnamen aanwijzen</string>
+     </property>
+    </widget>
+   </item>
+
   </layout>
   </widget>
  </widget>

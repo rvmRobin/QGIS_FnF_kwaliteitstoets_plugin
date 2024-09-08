@@ -4,6 +4,8 @@ from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsField, QgsFeat
 from qgis.PyQt import QtGui, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QVariant
 from qgis.utils import iface
+from .FnF_library.column_checker import check_columns, load_column_settings
+
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'FnF_plugin_dockwidget_base.ui'))
@@ -18,6 +20,7 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setupUi(self)
         self.populate_comboboxes()
         self.createha.clicked.connect(self.createha_clicked)
+        self.set_columns_button.clicked.connect(self.set_columns_clicked)
 
         QgsProject.instance().layersAdded.connect(self.update_comboboxes)
         QgsProject.instance().layerRemoved.connect(self.update_comboboxes)
@@ -140,3 +143,25 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Add the layer to the QGIS project
         QgsProject.instance().addMapLayer(grid_layer)
+    
+    def set_columns_clicked(self):
+        """Handle the column checking and setting process."""
+        selected_layer_id = self.comboBoxPointData.currentData()
+        if not selected_layer_id:
+            QtWidgets.QMessageBox.warning(self, "Warning", "Please select a point layer.")
+            return
+
+        layer = QgsProject.instance().mapLayer(selected_layer_id)
+        if not isinstance(layer, QgsVectorLayer):
+            QtWidgets.QMessageBox.warning(self, "Warning", "Selected layer is not valid.")
+            return
+
+        required_columns = ['Soortnaam_NL', 'Soortgroep', 'Date']  # Adjust this list
+        
+        # Check columns and save the selected columns
+        check_columns(layer, required_columns)
+
+    def load_column_settings(self):
+        """Load column settings from the saved file."""
+        settings_file = os.path.join(os.path.dirname(__file__), 'column_settings.txt')
+        return load_column_settings(settings_file)
