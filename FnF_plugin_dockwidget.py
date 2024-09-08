@@ -30,6 +30,10 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def populate_comboboxes(self):
         """Populate the combo boxes with layers from the QGIS project."""
+        # Get the currently selected polygon layer
+        current_polygon_layer_id = self.comboBoxPolygonLayer.currentData()
+        current_point_layer_id = self.comboBoxPointData.currentData()
+
         # Get layers from the QGIS project
         layers = QgsProject.instance().mapLayers().values()
         
@@ -48,7 +52,17 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             if isinstance(layer, QgsVectorLayer):  # Check if it's a vector layer
                 if layer.geometryType() == QgsWkbTypes.PolygonGeometry:  # Check if it's a polygon layer
                     self.comboBoxPolygonLayer.addItem(layer.name(), layer.id())
-    
+        # Restore the previously selected point layer
+        if current_point_layer_id:
+            point_index = self.comboBoxPointData.findData(current_point_layer_id)
+            if point_index != -1:
+                self.comboBoxPointData.setCurrentIndex(point_index)
+        # Restore the previously selected polygon layer
+        if current_polygon_layer_id:
+            index = self.comboBoxPolygonLayer.findData(current_polygon_layer_id)
+            if index != -1:
+                self.comboBoxPolygonLayer.setCurrentIndex(index)
+
     def update_comboboxes(self):
         """Update combo boxes when layers are added or removed."""
         self.populate_comboboxes()
