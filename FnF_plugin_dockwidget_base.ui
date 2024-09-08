@@ -45,8 +45,22 @@
     <widget class="QComboBox" name="comboBoxPolygonLayer"/>
    </item>
 
+   <!-- Label for Polygon Layer -->
+   <item row="2" column="0">
+    <widget class="QLabel" name="hagridlayer">
+     <property name="text">
+      <string>Selecteer gridlaag</string>
+     </property>
+    </widget>
+   </item>
+
+   <!-- ComboBox for Polygon Layer -->
+   <item row="2" column="1">
+    <widget class="QComboBox" name="comboBoxgridLayer"/>
+   </item>
+
    <!-- Submit Button -->
-   <item row="2" column="1" colspan="1">
+   <item row="3" column="1" colspan="1">
     <widget class="QPushButton" name="createha">
      <property name="text">
       <string>Maak hexagonengrid</string>
@@ -55,13 +69,51 @@
    </item>
 
    <!-- Submit Button -->
-   <item row="2" column="0" colspan="1">
+   <item row="3" column="0" colspan="1">
     <widget class="QPushButton" name="set_columns_button">
      <property name="text">
       <string>Kolomnamen aanwijzen</string>
      </property>
     </widget>
    </item>
+
+   <!-- Label for Input Field 1 -->
+   <item row="4" column="0">
+    <widget class="QLabel" name="labelInputField1">
+     <property name="text">
+      <string>begin jaar</string>
+     </property>
+    </widget>
+   </item>
+
+   <!-- Input Field 1 -->
+   <item row="5" column="0">
+    <widget class="QLineEdit" name="beginjaar"/>
+   </item>
+
+   <!-- Label for Input Field 2 -->
+   <item row="4" column="1">
+    <widget class="QLabel" name="labelInputField2">
+     <property name="text">
+      <string>tot jaar</string>
+     </property>
+    </widget>
+   </item>
+
+   <!-- Input Field 2 -->
+   <item row="5" column="1">
+    <widget class="QLineEdit" name="totjaar"/>
+   </item>
+
+   <!-- Submit Button -->
+   <item row="6" column="0" colspan="2">
+    <widget class="QPushButton" name="set_columns_button">
+     <property name="text">
+      <string>Voer kwaliteitsbepaling uit</string>
+     </property>
+    </widget>
+   </item>
+
 
   </layout>
   </widget>

@@ -5,7 +5,8 @@ from qgis.PyQt import QtGui, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QVariant
 from qgis.utils import iface
 from .FnF_library.column_checker import check_columns, load_column_settings
-
+from PyQt5 import QtCore
+import datetime
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'FnF_plugin_dockwidget_base.ui'))
@@ -18,9 +19,15 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         """Constructor."""
         super(FnF_pluginDockWidget, self).__init__(parent)
         self.setupUi(self)
+
+        current_year = datetime.datetime.now().year
+        six_years_ago = current_year - 6
+
         self.populate_comboboxes()
         self.createha.clicked.connect(self.createha_clicked)
         self.set_columns_button.clicked.connect(self.set_columns_clicked)
+        self.totjaar.setText(str(current_year))
+        self.beginjaar.setText(str(six_years_ago))
 
         QgsProject.instance().layersAdded.connect(self.update_comboboxes)
         QgsProject.instance().layerRemoved.connect(self.update_comboboxes)
@@ -55,6 +62,7 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             if isinstance(layer, QgsVectorLayer):  # Check if it's a vector layer
                 if layer.geometryType() == QgsWkbTypes.PolygonGeometry:  # Check if it's a polygon layer
                     self.comboBoxPolygonLayer.addItem(layer.name(), layer.id())
+        
         # Restore the previously selected point layer
         if current_point_layer_id:
             point_index = self.comboBoxPointData.findData(current_point_layer_id)
