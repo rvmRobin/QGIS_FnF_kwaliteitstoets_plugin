@@ -41,6 +41,7 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def populate_comboboxes(self):
         """Populate the combo boxes with layers from the QGIS project."""
         # Get the currently selected polygon layer
+        current_grid_layer_id = self.comboBoxgridLayer.currentData()
         current_polygon_layer_id = self.comboBoxPolygonLayer.currentData()
         current_point_layer_id = self.comboBoxPointData.currentData()
 
@@ -63,6 +64,14 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 if layer.geometryType() == QgsWkbTypes.PolygonGeometry:  # Check if it's a polygon layer
                     self.comboBoxPolygonLayer.addItem(layer.name(), layer.id())
         
+        # Populate the Polygon Layer ComboBox
+        self.comboBoxgridLayer.clear()
+        self.comboBoxgridLayer.addItem("Selecteer gebiedslaag")
+        for layer in layers:
+            if isinstance(layer, QgsVectorLayer):  # Check if it's a vector layer
+                if layer.geometryType() == QgsWkbTypes.PolygonGeometry:  # Check if it's a polygon layer
+                    self.comboBoxgridLayer.addItem(layer.name(), layer.id())
+        
         # Restore the previously selected point layer
         if current_point_layer_id:
             point_index = self.comboBoxPointData.findData(current_point_layer_id)
@@ -73,6 +82,12 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             index = self.comboBoxPolygonLayer.findData(current_polygon_layer_id)
             if index != -1:
                 self.comboBoxPolygonLayer.setCurrentIndex(index)
+        
+        # Restore the previously selected grid layer
+        if current_grid_layer_id:
+            index = self.comboBoxgridLayer.findData(current_polygon_layer_id)
+            if index != -1:
+                self.comboBoxgridLayer.setCurrentIndex(index)
 
     def update_comboboxes(self):
         """Update combo boxes when layers are added or removed."""
