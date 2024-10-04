@@ -99,7 +99,7 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     
     def set_columns(self, selected_layer_id, columnslayer):
         if not selected_layer_id:
-            QtWidgets.QMessageBox.warning(self, "Warning", "Please select a point layer.")
+            QtWidgets.QMessageBox.warning(self, "Warning", f"Please select a {columnslayer} layer.")
             return
 
         layer = QgsProject.instance().mapLayer(selected_layer_id)
