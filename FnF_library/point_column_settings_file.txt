@@ -1,3 +1,2 @@
 Soortnaam_NL;Soortnaam_NL
-Soortgroep;Soortgroep
-Date;Date
+Datum;Date

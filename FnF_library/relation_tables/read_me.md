@@ -1,0 +1,2 @@
+# Bij12 fouten in kwalificerende soortenlijst
+De download van de kwalificerende soortenlijst van Bij12 op het moment van ontwikkelen bevat verschillende fouten op gebied van naamgeving in verschillende kolommen. Dit is gefixt buitenom de plug-in. Uit het NDFF is een soortenlijst gegenereerd en heeft op verschillende kolommen gejoint tot er twee soorten overbleven die niet te koppelen waren. Wilde hyacint en Charadrius alexandrinus. Deze zijn handmatig aangepast.
