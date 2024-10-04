@@ -5,6 +5,8 @@ from qgis.PyQt import QtGui, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QVariant
 from qgis.utils import iface
 from .FnF_library.column_checker import check_columns, load_column_settings
+from .FnF_library.fnf_kwaliteitsbepaling import fnf_kwaliteitsbepaling
+from .FnF_library.create_ha_polygon_layer import get_bounding_box_from_selection, create_squares_from_bbox
 from PyQt5 import QtCore
 import datetime
 
@@ -25,7 +27,9 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         self.populate_comboboxes()
         self.createha.clicked.connect(self.createha_clicked)
-        self.set_columns_button.clicked.connect(self.set_columns_clicked)
+        self.set_point_columns_button.clicked.connect(self.set_point_columns_clicked)
+        self.set_polygon_columns_button.clicked.connect(self.set_polygon_columns_clicked)
+        self.fnf_kwaliteitstoets_button.clicked.connect(self.fnf_kwaliteitstoets_clicked)
         self.totjaar.setText(str(current_year))
         self.beginjaar.setText(str(six_years_ago))
 
@@ -64,9 +68,9 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 if layer.geometryType() == QgsWkbTypes.PolygonGeometry:  # Check if it's a polygon layer
                     self.comboBoxPolygonLayer.addItem(layer.name(), layer.id())
         
-        # Populate the Polygon Layer ComboBox
+        # Populate the Grid Layer ComboBox
         self.comboBoxgridLayer.clear()
-        self.comboBoxgridLayer.addItem("Selecteer gebiedslaag")
+        self.comboBoxgridLayer.addItem("Selecteer grid laag")
         for layer in layers:
             if isinstance(layer, QgsVectorLayer):  # Check if it's a vector layer
                 if layer.geometryType() == QgsWkbTypes.PolygonGeometry:  # Check if it's a polygon layer
@@ -92,9 +96,31 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def update_comboboxes(self):
         """Update combo boxes when layers are added or removed."""
         self.populate_comboboxes()
+    
+    def set_columns(self, selected_layer_id, columnslayer):
+        if not selected_layer_id:
+            QtWidgets.QMessageBox.warning(self, "Warning", "Please select a point layer.")
+            return
+
+        layer = QgsProject.instance().mapLayer(selected_layer_id)
+        if not isinstance(layer, QgsVectorLayer):
+            QtWidgets.QMessageBox.warning(self, "Warning", "Selected layer is not valid.")
+            return
+       
+        # Check columns and save the selected columns
+        check_columns(layer, columnslayer)
+
+    def set_point_columns_clicked(self):
+        """Handle the column checking and setting process."""
+        selected_layer_id = self.comboBoxPointData.currentData()
+        self.set_columns(selected_layer_id, 'point')
+
+    def set_polygon_columns_clicked(self):
+        """Handle the column checking and setting process."""
+        selected_layer_id = self.comboBoxPolygonLayer.currentData()
+        self.set_columns(selected_layer_id, 'polygon')
 
     def createha_clicked(self):
-        # Get the selected polygon layer from the combo box
         selected_layer_id = self.comboBoxPolygonLayer.currentData()
         if not selected_layer_id:
             QtWidgets.QMessageBox.warning(self, "Warning", "Please select a polygon layer.")
@@ -105,86 +131,38 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             QtWidgets.QMessageBox.warning(self, "Warning", "Selected layer is not a valid polygon layer.")
             return
 
-        # Get the bounding box from the selected polygons
-        bbox = self.get_bounding_box_from_selection(layer)
-        
+        bbox = get_bounding_box_from_selection(layer)
         if not bbox:
-            # If no polygons are selected, use the bounding box of the entire layer
             bbox = layer.extent()
-        
-        self.create_squares_from_bbox(bbox)
 
-    def get_bounding_box_from_selection(self, layer):
-        """Get the bounding box of the selected features in the layer."""
-        selection = layer.selectedFeatures()
-        if not selection:
-            return None
-
-        extent = QgsRectangle()
-        for feature in selection:
-            extent.combineExtentWith(feature.geometry().boundingBox())
-
-        return extent
-
-    def create_squares_from_bbox(self, bbox):
-        cell_size = 100  # 100x100 meter cells
-        
-        # Round bounding box coordinates to nearest 100 meters
-        x_min = math.floor(bbox.xMinimum() / cell_size) * cell_size - 100
-        y_min = math.floor(bbox.yMinimum() / cell_size) * cell_size - 100
-        x_max = math.ceil(bbox.xMaximum() / cell_size) * cell_size + 100
-        y_max = math.ceil(bbox.yMaximum() / cell_size) * cell_size + 100
-        
-        # Create a new vector layer for the grid
-        grid_layer = QgsVectorLayer("Polygon?crs=EPSG:28992", "Square Grid", "memory")
-        pr = grid_layer.dataProvider()
-        
-        # Add fields to the layer
-        pr.addAttributes([QgsField("id", QVariant.Int)])
-        grid_layer.updateFields()
-        
-        # Create a list to hold features
-        features = []
-        
-        # Generate the grid
-        x = x_min
-        while x < x_max:
-            y = y_min
-            while y < y_max:
-                # Create the geometry for each square cell
-                square_geom = QgsGeometry.fromRect(QgsRectangle(x, y, x + cell_size, y + cell_size))
-                feature = QgsFeature()
-                feature.setGeometry(square_geom)
-                feature.setAttributes([len(features)])
-                features.append(feature)
-                y += cell_size
-            x += cell_size
-        
-        # Add features to the grid layer
-        pr.addFeatures(features)
-        grid_layer.updateExtents()
-        
-        # Add the layer to the QGIS project
+        grid_layer = create_squares_from_bbox(bbox)
         QgsProject.instance().addMapLayer(grid_layer)
-    
-    def set_columns_clicked(self):
-        """Handle the column checking and setting process."""
-        selected_layer_id = self.comboBoxPointData.currentData()
-        if not selected_layer_id:
-            QtWidgets.QMessageBox.warning(self, "Warning", "Please select a point layer.")
-            return
-
-        layer = QgsProject.instance().mapLayer(selected_layer_id)
-        if not isinstance(layer, QgsVectorLayer):
-            QtWidgets.QMessageBox.warning(self, "Warning", "Selected layer is not valid.")
-            return
-
-        required_columns = ['Soortnaam_NL', 'Soortgroep', 'Date']  # Adjust this list
-        
-        # Check columns and save the selected columns
-        check_columns(layer, required_columns)
 
     def load_column_settings(self):
         """Load column settings from the saved file."""
         settings_file = os.path.join(os.path.dirname(__file__), 'column_settings.txt')
         return load_column_settings(settings_file)
+
+    def fnf_kwaliteitstoets_clicked(self):
+        # Get selected layer IDs from combo boxes
+        grid_layer_id = self.comboBoxgridLayer.currentData()
+        polygon_layer_id = self.comboBoxPolygonLayer.currentData()
+        point_layer_id = self.comboBoxPointData.currentData()
+
+        # Ensure all layers are selected
+        if not (grid_layer_id and polygon_layer_id and point_layer_id):
+            QtWidgets.QMessageBox.warning(self, "Warning", "Please select grid, polygon, and point layers.")
+            return
+
+        # Retrieve the layers from their IDs
+        grid_layer = QgsProject.instance().mapLayer(grid_layer_id)
+        polygon_layer = QgsProject.instance().mapLayer(polygon_layer_id)
+        point_layer = QgsProject.instance().mapLayer(point_layer_id)
+
+        # Ensure valid layers
+        if not (grid_layer and polygon_layer and point_layer):
+            QtWidgets.QMessageBox.warning(self, "Warning", "One or more selected layers are not valid.")
+            return
+
+        # Run the external function, passing the actual layers
+        fnf_kwaliteitsbepaling(grid_layer, polygon_layer, point_layer)

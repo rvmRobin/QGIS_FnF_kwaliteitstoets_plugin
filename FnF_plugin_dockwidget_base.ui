@@ -31,6 +31,15 @@
     <widget class="QComboBox" name="comboBoxPointData"/>
    </item>
 
+    <!-- Submit Button -->
+   <item row="0" column="2" colspan="1">
+    <widget class="QPushButton" name="set_point_columns_button">
+     <property name="text">
+      <string>Kolomnamen aanwijzen</string>
+     </property>
+    </widget>
+   </item>
+
    <!-- Label for Polygon Layer -->
    <item row="1" column="0">
     <widget class="QLabel" name="labelPolygonLayer">
@@ -45,6 +54,15 @@
     <widget class="QComboBox" name="comboBoxPolygonLayer"/>
    </item>
 
+    <!-- Submit Button -->
+    <item row="1" column="2" colspan="1">
+        <widget class="QPushButton" name="set_polygon_columns_button">
+        <property name="text">
+        <string>Kolomnamen aanwijzen</string>
+        </property>
+        </widget>
+    </item>
+
    <!-- Label for Polygon Layer -->
    <item row="2" column="0">
     <widget class="QLabel" name="hagridlayer">
@@ -55,12 +73,12 @@
    </item>
 
    <!-- ComboBox for Polygon Layer -->
-   <item row="2" column="1">
+   <item row="2" column="1" colspan="2">
     <widget class="QComboBox" name="comboBoxgridLayer"/>
    </item>
 
    <!-- Submit Button -->
-   <item row="3" column="1" colspan="1">
+   <item row="3" column="1" colspan="2">
     <widget class="QPushButton" name="createha">
      <property name="text">
       <string>Maak hexagonengrid</string>
@@ -68,17 +86,8 @@
     </widget>
    </item>
 
-   <!-- Submit Button -->
-   <item row="3" column="0" colspan="1">
-    <widget class="QPushButton" name="set_columns_button">
-     <property name="text">
-      <string>Kolomnamen aanwijzen</string>
-     </property>
-    </widget>
-   </item>
-
    <!-- Label for Input Field 1 -->
-   <item row="4" column="0">
+   <item row="4" column="1">
     <widget class="QLabel" name="labelInputField1">
      <property name="text">
       <string>begin jaar</string>
@@ -87,12 +96,12 @@
    </item>
 
    <!-- Input Field 1 -->
-   <item row="5" column="0">
+   <item row="5" column="1">
     <widget class="QLineEdit" name="beginjaar"/>
    </item>
 
    <!-- Label for Input Field 2 -->
-   <item row="4" column="1">
+   <item row="4" column="2">
     <widget class="QLabel" name="labelInputField2">
      <property name="text">
       <string>tot jaar</string>
@@ -101,13 +110,13 @@
    </item>
 
    <!-- Input Field 2 -->
-   <item row="5" column="1">
+   <item row="5" column="2">
     <widget class="QLineEdit" name="totjaar"/>
    </item>
 
    <!-- Submit Button -->
-   <item row="6" column="0" colspan="2">
-    <widget class="QPushButton" name="set_columns_button">
+   <item row="6" column="0" colspan="3">
+    <widget class="QPushButton" name="fnf_kwaliteitstoets_button">
      <property name="text">
       <string>Voer kwaliteitsbepaling uit</string>
      </property>

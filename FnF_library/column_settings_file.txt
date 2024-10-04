@@ -1,3 +1,0 @@
-Soortnaam_NL;Naam
-Soortgroep;Naam
-Date;DateTimeS

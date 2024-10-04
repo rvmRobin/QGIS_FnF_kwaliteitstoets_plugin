@@ -21,7 +21,6 @@ class ColumnSelectionDialog(QtWidgets.QDialog):
                     combo_box.setCurrentIndex(index)
             
             self.combo_boxes[required_col] = combo_box
-
             self.layout.addWidget(label)
             self.layout.addWidget(combo_box)
 
@@ -34,9 +33,21 @@ class ColumnSelectionDialog(QtWidgets.QDialog):
     def get_selected_columns(self):
         return {col: self.combo_boxes[col].currentText() for col in self.combo_boxes}
 
-def check_columns(layer: QgsVectorLayer, required_columns: list):
+def load_required_columns(settings_file):
+    """Load required columns from the first column of the settings file."""
+    required_columns = []
+    with open(settings_file, 'r') as file:
+        for line in file:
+            if line.strip():  # Ensure the line is not empty
+                # Split the line by the semicolon and append the first element
+                required_columns.append(line.split(';')[0].strip())  # Strip to remove any leading/trailing whitespace
+    return required_columns
+
+
+def check_columns(layer: QgsVectorLayer, columnslayer):
     """Check columns in the layer and always allow the user to reselect them."""
-    settings_file = os.path.join(os.path.dirname(__file__), 'column_settings_file.txt')
+    settings_file = os.path.join(os.path.dirname(__file__), f'{columnslayer}_column_settings_file.txt')
+    required_columns = load_required_columns(settings_file)
 
     # Get current fields from the layer
     fields = layer.fields()
