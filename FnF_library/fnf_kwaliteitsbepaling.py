@@ -10,6 +10,15 @@ from qgis.core import (
     edit
 )
 from qgis.PyQt.QtCore import QVariant
+## CLEAN THIS
+from qgis.core import (
+    QgsProcessing,
+    QgsProcessingFeatureSourceDefinition,
+    QgsProject,
+    QgsApplication,
+)
+from qgis.analysis import QgsNativeAlgorithms
+import processing
 
 
 def load_species_list():
@@ -25,89 +34,141 @@ def load_column_settings_files():
 
     species_column_name = load_column_settings(species_settings_file)['Soortnaam_NL']
     polygon_beheertype_name = load_column_settings(polygon_settings_file)['BeheerType']
+    polygon_gebied_name = load_column_settings(polygon_settings_file)['Gebied']
 
-    return species_column_name, polygon_beheertype_name
+    return species_column_name, polygon_beheertype_name, polygon_gebied_name
 
-
-def get_intersecting_and_neighboring_cells(grid_layer, polygon_layer, polygon_beheertype_name):
+def spatial_join_two_layers(target_layer, join_layer, polygon_beheertype_name, polygon_gebied_name):
     """
-    Identify grid cells that intersect with polygons, and add nearby cells using a buffer.
-    Returns a dictionary of grid cell IDs mapped to beheertype values and a set of grid cell IDs to include.
+    Perform a spatial join between two QGIS vector layers using 'native:joinattributesbylocation'.
+
+    Parameters:
+    target_layer (QgsVectorLayer): The layer that receives attributes.
+    join_layer (QgsVectorLayer): The layer that provides attributes.
+
+    Returns:
+    QgsVectorLayer or None: The resulting joined layer, or None if the operation fails.
     """
-    # Create a spatial index for the grid layer
-    spatial_index = QgsSpatialIndex(grid_layer.getFeatures())
+    # Ensure the processing algorithms are registered
+    QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms())
 
-    # Dictionary to hold the beheertypen lists for each grid feature
-    beheertypen_dict = {feature.id(): [] for feature in grid_layer.getFeatures()}
-    grid_cells_to_include = set()
+    # Validate input layers
+    if not target_layer or not join_layer:
+        print("Error: One or both input layers are invalid.")
+        return None
 
-    # Iterate over polygon features
-    for polygon_feature in polygon_layer.getFeatures():
-        polygon_geom = polygon_feature.geometry()
-        beheertype_value = polygon_feature[polygon_beheertype_name]  # Get the beheertypen value
+    # Define parameters for the spatial join
+    params = {
+        'INPUT': QgsProcessingFeatureSourceDefinition(
+            target_layer.id(),  # Target layer
+            selectedFeaturesOnly=False,
+        ),
+        'JOIN': QgsProcessingFeatureSourceDefinition(
+            join_layer.id(),  # Join layer
+            selectedFeaturesOnly=False,
+        ),
+        'PREDICATE': [0], # Spatial predicate
+        'JOIN_FIELDS': [polygon_beheertype_name, polygon_gebied_name], # Joining fields
+        'METHOD': 0, # Create a new layer
+        'DISCARD_NONMATCHING': False, # Keep non-matching features
+        'OUTPUT': 'memory:' # Store result in memory
+    }
 
-        # Get grid cells that intersect with the polygon
-        intersecting_ids = spatial_index.intersects(polygon_geom.boundingBox())
+    try:
+        # Run the processing algorithm
+        result = processing.run("native:joinattributesbylocation", params)
+        return result
 
-        for grid_id in intersecting_ids:
-            grid_feature = grid_layer.getFeature(grid_id)
-            grid_geom = grid_feature.geometry()
+    except Exception as e:
+        print(f"An error occurred during the spatial join: {e}")
+        return None
 
-            if grid_geom.intersects(polygon_geom):
-                grid_cells_to_include.add(grid_id)
-                beheertypen_dict[grid_id].append(beheertype_value)
-
-                # Add neighboring cells using a buffer
-                buffer_geom = grid_geom.buffer(0.001, 1)
-                nearby_ids = spatial_index.intersects(buffer_geom.boundingBox())
-                grid_cells_to_include.update(nearby_ids)
-
-    return beheertypen_dict, grid_cells_to_include
-
-
-def create_aggregated_layer(grid_layer, beheertypen_dict, grid_cells_to_include):
-    """
-    Create a new memory layer to store aggregated beheertype values and add it to the QGIS project.
-    """
-    # Create a new memory layer
-    new_layer = QgsVectorLayer(f'Polygon?crs={grid_layer.crs().authid()}', 'Overlappende_gridcellen', 'memory')
-    new_layer_data = new_layer.dataProvider()
-
-    # Add fields from the grid layer and a new field for aggregated beheertype values
-    new_layer_data.addAttributes(grid_layer.fields())
-    new_layer.updateFields()
-
-    # Add features to the new layer
-    with edit(new_layer):
-        for grid_id in grid_cells_to_include:
-            grid_feature = grid_layer.getFeature(grid_id)
-            new_feature = QgsFeature(new_layer.fields())
-
-            new_feature.setGeometry(grid_feature.geometry())
-            new_feature.setAttributes(grid_feature.attributes())
-
-            beheertypen_list = beheertypen_dict.get(grid_id, [])
-            if beheertypen_list:
-                beheertypen_str = ', '.join(beheertypen_list)
-
-            new_layer_data.addFeature(new_feature)
-
-    # Add the new layer to the QGIS project
-    QgsProject.instance().addMapLayer(new_layer)
-    return new_layer
+def aggr_joined_layer(joined_layer, polygon_beheertype_name, polygon_gebied_name):
+    params={
+        'INPUT': joined_layer,
+        'GROUP_BY':'id',
+        'AGGREGATES':[{'aggregate': 'concatenate','delimiter': ',','input': polygon_beheertype_name,'length': 0,'name': 'polygon_beheertype_name','precision': 0,'sub_type': 0,'type': 10,'type_name': 'text'},
+                        {'aggregate': 'concatenate','delimiter': ',','input': polygon_gebied_name,'length': 0,'name': 'polygon_gebied_name','precision': 0,'sub_type': 0,'type': 10,'type_name': 'text'}],
+        'OUTPUT':'memory:'} # Store result in memory
     
+    try:
+        # Run the aggregate algorithm
+        aggr_result = processing.run("native:aggregate", params)
+        return aggr_result
+
+    except Exception as e:
+        print(f"An error occurred during the spatial join: {e}")
+        return None
+
+def vectorlayer_to_df(vectorlayer):
+    if not vectorlayer.isValid():
+        raise ValueError("Invalid vectorlayer for vactorlayer to df")
+    else:
+        fields = [field.name() for field in vectorlayer.fields()]
+        data = [{field: feature[field] for field in fields} for feature in vectorlayer.getFeatures()]
+        df_layer = pd.DataFrame(data)
+        print(df_layer)
+        return df_layer
+
+def pd_aggr_layer(df_layer_to_aggr):
+    #df_layer_to_aggr.groupby('id')['BeheerType', 'Gebied'].apply(lambda x: ','.join(x)).reset_index()
+    df_layer = df_layer_to_aggr.groupby('id').agg({'beheerType': lambda x: list(x), 'Gebied': lambda x: list(x)}).reset_index()
+    #df_layer = df_layer[df_layer['beheerType'].notna()] # All grid with beheertype
+    df_layer = df_layer[df_layer['beheerType'].apply(lambda x: x[0] is not None)]
+    df_layer['beheerType'] = [list(set(x)) for x in df_layer['beheerType']]
+    df_layer['Gebied'] = [list(set(x)) for x in  df_layer['Gebied']]
+
+    print(df_layer)
+    return df_layer
+
+def df_to_project(df):
+    # Create an in-memory layer
+    layer = QgsVectorLayer("None", "Grid_beheertypen_lijst", "memory")
+    provider = layer.dataProvider()
+
+    # Add fields to the layer
+    fields = [QgsField(name, QVariant.String) for name in df.columns]
+    provider.addAttributes(fields)
+    layer.updateFields()
+
+    # Add rows as features
+    for _, row in df.iterrows():
+        feature = QgsFeature()
+        # Ensure all row values are converted to strings
+        feature.setAttributes([str(value) for value in row.values])
+        provider.addFeature(feature)
+
+    # Add the layer to the QGIS project
+    QgsProject.instance().addMapLayer(layer)
+
+    print("Layer added successfully!")
+
 def fnf_kwaliteitsbepaling(grid_layer, polygon_layer, point_layer):
     """Main function to run the kwaliteitsbepaling process."""
     #Load data and column settings
     species_list = load_species_list()
-    species_column_name, polygon_beheertype_name = load_column_settings_files()
+    species_column_name, polygon_beheertype_name, polygon_gebied_name = load_column_settings_files()
 
     #Clear previous selections in the grid layer
     grid_layer.removeSelection()
 
-    #Get intersecting and neighboring grid cells
-    beheertypen_dict, grid_cells_to_include = get_intersecting_and_neighboring_cells(grid_layer, polygon_layer, polygon_beheertype_name)
-
-    #Create the aggregated beheertypen layer and add it to the project
-    create_aggregated_layer(grid_layer, beheertypen_dict, grid_cells_to_include)
-    
+    grid_polygon_join = spatial_join_two_layers(grid_layer, polygon_layer, polygon_beheertype_name, polygon_gebied_name)
+     # Check if the result was created
+    if 'OUTPUT' in grid_polygon_join:
+        grid_polygon_join_output = grid_polygon_join['OUTPUT']
+        
+        df_grid_polygon_join = vectorlayer_to_df(grid_polygon_join_output)
+        aggr_df_grid_polygon = pd_aggr_layer(df_grid_polygon_join)
+        df_to_project(aggr_df_grid_polygon)
+        
+        #aggr_grid = aggr_joined_layer(grid_polygon_join_output, polygon_beheertype_name, polygon_gebied_name)
+        #if 'OUTPUT' in aggr_grid:
+        #    aggr_grid_output = aggr_grid['OUTPUT']
+        #    QgsProject.instance().addMapLayer(aggr_grid_output)
+        #    print("Spatial join and aggregate completed. Result added to the map.")
+        #else:
+        #    print("Error: aggragate did not produce a valid output.")
+        #    return None
+    else:
+        print("Error: Spatial join did not produce a valid output.")
+        return None
