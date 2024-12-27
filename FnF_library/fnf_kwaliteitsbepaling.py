@@ -17,6 +17,7 @@ from qgis.analysis import QgsNativeAlgorithms
 from PyQt5.QtCore import QVariant
 import processing
 from .column_checker import load_column_settings
+from .filter_point_layer import filter_point_layer_to_temp_layer
 
 
 def load_species_list():
@@ -37,7 +38,7 @@ def load_column_settings_files():
     return species_column_name, polygon_beheertype_name, polygon_gebied_name
 
 
-def spatial_join_two_layers(target_layer, join_layer, joining_fields):
+def spatial_join_two_layers(target_layer, join_layer, joining_fields, selection_only= False):
     """
     Perform a spatial join between two QGIS vector layers using 'native:joinattributesbylocation'.
     """
@@ -53,7 +54,7 @@ def spatial_join_two_layers(target_layer, join_layer, joining_fields):
         ),
         'JOIN': QgsProcessingFeatureSourceDefinition(
             join_layer.id(),
-            selectedFeaturesOnly=False,
+            selectedFeaturesOnly=selection_only,
         ),
         'PREDICATE': [0],
         'JOIN_FIELDS': joining_fields,
@@ -63,6 +64,7 @@ def spatial_join_two_layers(target_layer, join_layer, joining_fields):
     }
 
     result = processing.run("native:joinattributesbylocation", params)
+
     return result
 
 
@@ -124,6 +126,14 @@ class JoinAndProcessTask(QgsTask):
             grid_polygon_join = spatial_join_two_layers(
                 self.grid_layer, self.polygon_layer, list(self.polygon_rules.keys())
             )
+
+            # Filter temp layer (slow)
+            vogels_layer, point_layer = filter_point_layer_to_temp_layer(self.point_layer)
+            
+            # filter using filter expression selection (does not run spation_join_two_layers)
+            #expression = f'"Soortgroep" != \'vogels\'' 
+            #self.point_layer.selectByExpression(expression)
+
             grid_point_join = spatial_join_two_layers(
                 self.grid_layer, self.point_layer, list(self.point_rules.keys())
             )
@@ -134,7 +144,7 @@ class JoinAndProcessTask(QgsTask):
                 "Grid_beheertypen_lijst",
                 to_project = False
             )
-
+            print('3')
             aggr_df_grid_point = process_and_add_to_project(
                 grid_point_join,
                 self.point_rules,
@@ -147,10 +157,8 @@ class JoinAndProcessTask(QgsTask):
                 aggr_df_grid_polygon,
                 aggr_df_grid_point,
                 on="id",
-                how="outer"  # Use 'outer' to include all records
+                how="outer"
             )
-
-            # Add the merged DataFrame to the QGIS project
             df_to_project(merged_df, "Grid_Combined")
 
             return True
