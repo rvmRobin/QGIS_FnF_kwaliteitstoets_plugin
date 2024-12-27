@@ -89,7 +89,7 @@ class FnF_pluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Restore the previously selected grid layer
         if current_grid_layer_id:
-            index = self.comboBoxgridLayer.findData(current_polygon_layer_id)
+            index = self.comboBoxgridLayer.findData(current_grid_layer_id)
             if index != -1:
                 self.comboBoxgridLayer.setCurrentIndex(index)
 
