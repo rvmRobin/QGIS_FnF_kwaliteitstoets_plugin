@@ -97,7 +97,7 @@ def df_to_project(df, layer_name):
     QgsProject.instance().addMapLayer(layer)
 
 
-def process_and_add_to_project(join_result, aggregation_rules, layer_name):
+def process_and_add_to_project(join_result, aggregation_rules, layer_name, to_project = True):
     """Process join results and add them as a layer to the project."""
     if 'OUTPUT' not in join_result:
         raise ValueError("Join result does not contain 'OUTPUT'.")
@@ -105,7 +105,9 @@ def process_and_add_to_project(join_result, aggregation_rules, layer_name):
     join_output = join_result['OUTPUT']
     df_layer = vectorlayer_to_df(join_output)
     aggregated_df = pd_aggr_layer(df_layer, aggregation_rules)
-    df_to_project(aggregated_df, layer_name)
+    if to_project:
+        df_to_project(aggregated_df, layer_name)
+    return aggregated_df
 
 
 class JoinAndProcessTask(QgsTask):
@@ -126,16 +128,30 @@ class JoinAndProcessTask(QgsTask):
                 self.grid_layer, self.point_layer, list(self.point_rules.keys())
             )
 
-            process_and_add_to_project(
+            aggr_df_grid_polygon = process_and_add_to_project(
                 grid_polygon_join,
                 self.polygon_rules,
-                "Grid_beheertypen_lijst"
+                "Grid_beheertypen_lijst",
+                to_project = False
             )
-            process_and_add_to_project(
+
+            aggr_df_grid_point = process_and_add_to_project(
                 grid_point_join,
                 self.point_rules,
-                "Grid_point_lijst"
+                "Grid_point_lijst",
+                to_project = False
             )
+
+            # Merge the processed DataFrames on 'id'
+            merged_df = pd.merge(
+                aggr_df_grid_polygon,
+                aggr_df_grid_point,
+                on="id",
+                how="outer"  # Use 'outer' to include all records
+            )
+
+            # Add the merged DataFrame to the QGIS project
+            df_to_project(merged_df, "Grid_Combined")
 
             return True
         except Exception as e:
