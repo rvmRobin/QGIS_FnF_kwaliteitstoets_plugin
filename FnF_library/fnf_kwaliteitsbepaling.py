@@ -18,13 +18,12 @@ from PyQt5.QtCore import QVariant
 import processing
 from .column_checker import load_column_settings
 from .filter_point_layer import filter_point_layer_to_temp_layer
-
+from .vogels_territorium_calc import vogels_territorium
 
 def load_species_list():
     """Load the species list CSV."""
     species_file_path = os.path.join(os.path.dirname(__file__), 'relation_tables', 'bij12_kwalificerendesoorten_fix.csv')
     return pd.read_csv(species_file_path)
-
 
 def load_column_settings_files():
     """Load the column settings for both point and polygon layers."""
@@ -121,30 +120,28 @@ class JoinAndProcessTask(QgsTask):
         self.polygon_rules = polygon_rules
         self.point_rules = point_rules
 
-    def run(self):
+    def run(self,  polygon_aggr = True):
         try:
             grid_polygon_join = spatial_join_two_layers(
                 self.grid_layer, self.polygon_layer, list(self.polygon_rules.keys())
             )
 
-            # Filter temp layer (slow)
-            vogels_layer, point_layer = filter_point_layer_to_temp_layer(self.point_layer)
-            
-            # filter using filter expression selection (does not run spation_join_two_layers)
-            #expression = f'"Soortgroep" != \'vogels\'' 
-            #self.point_layer.selectByExpression(expression)
-
             grid_point_join = spatial_join_two_layers(
                 self.grid_layer, self.point_layer, list(self.point_rules.keys())
             )
 
-            aggr_df_grid_polygon = process_and_add_to_project(
-                grid_polygon_join,
-                self.polygon_rules,
-                "Grid_beheertypen_lijst",
-                to_project = False
-            )
-            print('3')
+            
+            if polygon_aggr:
+                aggr_df_grid_polygon = process_and_add_to_project(
+                    grid_polygon_join,
+                    self.polygon_rules,
+                    "Grid_beheertypen_lijst",
+                    to_project = False
+                )
+            else:
+                grid_polygon_join_output = grid_polygon_join['OUTPUT']
+                aggr_df_grid_polygon = vectorlayer_to_df(grid_polygon_join_output)
+
             aggr_df_grid_point = process_and_add_to_project(
                 grid_point_join,
                 self.point_rules,
@@ -152,10 +149,18 @@ class JoinAndProcessTask(QgsTask):
                 to_project = False
             )
 
+            vogels_territorium_df = vogels_territorium(aggr_df_grid_point)
+            merged_vogels_territorium_df = pd.merge(
+                aggr_df_grid_point,
+                vogels_territorium_df,
+                on="id",
+                how="outer"
+            )
+
             # Merge the processed DataFrames on 'id'
             merged_df = pd.merge(
                 aggr_df_grid_polygon,
-                aggr_df_grid_point,
+                merged_vogels_territorium_df,
                 on="id",
                 how="outer"
             )
